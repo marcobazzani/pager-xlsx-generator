@@ -1,0 +1,138 @@
+# PagerDuty-style Schedule Configuration
+# Each layer can have different time windows for different days of the week
+# This allows flexible configuration (e.g., shorter shifts on Friday)
+
+schedule:
+  name: "Business Hours - Flexible Day Schedule"
+  description: "Business hours coverage with day-specific time windows"
+  
+  # Default date range (can be overridden via command line)
+  start_date: "2026-01-20"  # Default start date (YYYY-MM-DD)
+  duration_months: 3         # Default duration in months
+  
+  layers:
+    layer1:
+      name: "Layer 1"
+      # Time windows per day - each day can have its own start/end times
+      time_windows:
+        monday:
+          start: "08:00"
+          end: "10:30"
+        tuesday:
+          start: "08:00"
+          end: "10:30"
+        wednesday:
+          start: "08:00"
+          end: "10:30"
+        thursday:
+          start: "08:00"
+          end: "10:30"
+        friday:
+          start: "08:00"
+          end: "09:30"
+      rotation_team:
+        - "Utente 1"
+        - "Utente 2"
+        - "Utente 3"
+        - "Utente 4"
+        - "Utente 5"
+        - "Utente 6"
+        - "Utente 7"
+        - "Utente 8"
+        - "Utente 9"
+        - "Utente 10"
+    
+    layer2:
+      name: "Layer 2"
+      time_windows:
+        monday:
+          start: "10:30"
+          end: "13:00"
+        tuesday:
+          start: "10:30"
+          end: "13:00"
+        wednesday:
+          start: "10:30"
+          end: "13:00"
+        thursday:
+          start: "10:30"
+          end: "13:00"
+        friday:
+          start: "09:30"
+          end: "11:00"
+      rotation_team:
+        - "Utente 10"
+        - "Utente 1"
+        - "Utente 2"
+        - "Utente 3"
+        - "Utente 4"
+        - "Utente 5"
+        - "Utente 6"
+        - "Utente 7"
+        - "Utente 8"
+        - "Utente 9"
+    
+    layer3:
+      name: "Layer 3"
+      time_windows:
+        monday:
+          start: "13:00"
+          end: "15:30"
+        tuesday:
+          start: "13:00"
+          end: "15:30"
+        wednesday:
+          start: "13:00"
+          end: "15:30"
+        thursday:
+          start: "13:00"
+          end: "15:30"
+        friday:
+          start: "11:00"
+          end: "13:00"
+      rotation_team:
+        - "Utente 9"
+        - "Utente 10"
+        - "Utente 1"
+        - "Utente 2"
+        - "Utente 3"
+        - "Utente 4"
+        - "Utente 5"
+        - "Utente 6"
+        - "Utente 7"
+        - "Utente 8"
+    
+    layer4:
+      name: "Layer 4"
+      time_windows:
+        monday:
+          start: "15:30"
+          end: "18:00"
+        tuesday:
+          start: "15:30"
+          end: "18:00"
+        wednesday:
+          start: "15:30"
+          end: "18:00"
+        thursday:
+          start: "15:30"
+          end: "18:00"
+        friday:
+          start: "13:00"
+          end: "18:00"
+          dummy: true  # Friday afternoon is dummy - consumes rotation but not shown
+      rotation_team:
+        - "Utente 8"
+        - "Utente 9"
+        - "Utente 10"
+        - "Utente 1"
+        - "Utente 2"
+        - "Utente 3"
+        - "Utente 4"
+        - "Utente 5"
+        - "Utente 6"
+        - "Utente 7"
+
+
+
+

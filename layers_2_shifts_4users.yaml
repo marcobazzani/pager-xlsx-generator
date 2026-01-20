@@ -1,0 +1,63 @@
+# PagerDuty-style Schedule Configuration
+# 2 layers with 4 users
+# Monday-Thursday: 08:00-18:00 (2 layers of 5h each)
+# Friday: 08:00-13:00 (only morning shift, afternoon is dummy)
+
+schedule:
+  name: "2-Layer Schedule - 4 Users"
+  description: "Two 5-hour shifts with 4 team members"
+  
+  # Default date range (can be overridden via command line)
+  start_date: "2026-01-20"  # Default start date (YYYY-MM-DD)
+  duration_months: 3         # Default duration in months
+  
+  layers:
+    layer1:
+      name: "Morning Shift"
+      # Time windows per day - each day can have its own start/end times
+      time_windows:
+        monday:
+          start: "08:00"
+          end: "13:00"
+        tuesday:
+          start: "08:00"
+          end: "13:00"
+        wednesday:
+          start: "08:00"
+          end: "13:00"
+        thursday:
+          start: "08:00"
+          end: "13:00"
+        friday:
+          start: "08:00"
+          end: "13:00"
+      rotation_team:
+        - "Utente 1"
+        - "Utente 2"
+        - "Utente 3"
+        - "Utente 4"
+    
+    layer2:
+      name: "Afternoon Shift"
+      time_windows:
+        monday:
+          start: "13:00"
+          end: "18:00"
+        tuesday:
+          start: "13:00"
+          end: "18:00"
+        wednesday:
+          start: "13:00"
+          end: "18:00"
+        thursday:
+          start: "13:00"
+          end: "18:00"
+        friday:
+          start: "13:00"
+          end: "18:00"
+          dummy: true  # Friday afternoon is dummy - consumes rotation but not shown
+      rotation_team:
+        - "Utente 2"
+        - "Utente 3"
+        - "Utente 4"
+        - "Utente 1"
