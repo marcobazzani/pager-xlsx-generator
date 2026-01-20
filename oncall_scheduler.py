@@ -22,10 +22,166 @@ from openpyxl.utils import get_column_letter
 import yaml
 import os
 import re
+import json
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import Rectangle
 import matplotlib.dates as mdates
+
+
+def parse_override_argument(override_str):
+    """
+    Parse override argument in format: "DD/MM/YYYY@HH:MM User Name" or "NOW User Name"
+    
+    Args:
+        override_str: Override string
+    
+    Returns:
+        Tuple of (datetime, username) or (None, username) for NOW
+    
+    Examples:
+        "30/01/2026@15:00 User Overrider" -> (datetime(2026, 1, 30, 15, 0), "User Overrider")
+        "NOW John Doe" -> (None, "John Doe")
+    """
+    override_str = override_str.strip()
+    
+    # Check for NOW keyword
+    if override_str.upper().startswith('NOW '):
+        username = override_str[4:].strip()
+        return (None, username)
+    
+    # Parse date-time format: DD/MM/YYYY@HH:MM Username
+    pattern = r'^(\d{2})/(\d{2})/(\d{4})@(\d{1,2}):(\d{2})\s+(.+)$'
+    match = re.match(pattern, override_str)
+    
+    if not match:
+        raise ValueError(
+            f"Invalid override format '{override_str}'. "
+            f"Use 'DD/MM/YYYY@HH:MM Username' or 'NOW Username'"
+        )
+    
+    day, month, year, hour, minute, username = match.groups()
+    override_dt = datetime(int(year), int(month), int(day), int(hour), int(minute))
+    
+    return (override_dt, username.strip())
+
+
+def find_shift_for_override(layer_shifts, override_dt):
+    """
+    Find the shift that should be overridden based on datetime.
+    
+    Args:
+        layer_shifts: List of (date, layer_name, time_window, person, layer_idx)
+        override_dt: Datetime to find the shift for (or None for NOW)
+    
+    Returns:
+        Index of the shift in layer_shifts, or None if not found
+    """
+    if override_dt is None:
+        # NOW - find current shift
+        override_dt = datetime.now()
+    
+    # Check each shift
+    for idx, (shift_date, layer_name, time_window, person, layer_idx) in enumerate(layer_shifts):
+        # Parse time window
+        time_parts = time_window.split(' - ')
+        if len(time_parts) != 2:
+            continue
+        
+        start_time_str = time_parts[0].strip()
+        end_time_str = time_parts[1].strip()
+        
+        # Parse times
+        try:
+            start_hour, start_min = map(int, start_time_str.split(':'))
+            end_hour, end_min = map(int, end_time_str.split(':'))
+        except:
+            continue
+        
+        # Create datetime objects for this shift
+        shift_start = shift_date.replace(hour=start_hour, minute=start_min, second=0, microsecond=0)
+        shift_end = shift_date.replace(hour=end_hour, minute=end_min, second=0, microsecond=0)
+        
+        # Check if override_dt falls within this shift
+        if shift_start <= override_dt < shift_end:
+            return idx
+    
+    return None
+
+
+def apply_overrides(layer_shifts, overrides):
+    """
+    Apply overrides to the layer_shifts list.
+    
+    Args:
+        layer_shifts: List of (date, layer_name, time_window, person, layer_idx)
+        overrides: List of (datetime, username) tuples
+    
+    Returns:
+        Modified layer_shifts list and list of applied overrides with details
+    """
+    applied_overrides = []
+    
+    for override_dt, username in overrides:
+        shift_idx = find_shift_for_override(layer_shifts, override_dt)
+        
+        if shift_idx is not None:
+            # Get original shift details
+            original_shift = layer_shifts[shift_idx]
+            shift_date, layer_name, time_window, original_person, layer_idx = original_shift
+            
+            # Apply override
+            layer_shifts[shift_idx] = (shift_date, layer_name, time_window, username, layer_idx)
+            
+            # Record what was changed
+            override_info = {
+                'date': shift_date.strftime('%Y-%m-%d'),
+                'time_window': time_window,
+                'layer': layer_name,
+                'original_person': original_person,
+                'override_person': username,
+                'override_datetime': override_dt.strftime('%Y-%m-%d %H:%M') if override_dt else 'NOW'
+            }
+            applied_overrides.append(override_info)
+            
+            print(f"  ✓ Override applied: {shift_date.strftime('%Y-%m-%d')} {time_window} - {original_person} → {username}")
+        else:
+            dt_str = override_dt.strftime('%Y-%m-%d %H:%M') if override_dt else 'NOW'
+            print(f"  ✗ Warning: No shift found for override at {dt_str}")
+    
+    return layer_shifts, applied_overrides
+
+
+def save_execution_metadata(output_dir, config_file, start_date, end_date, overrides, applied_overrides):
+    """
+    Save execution metadata to allow regeneration with same parameters.
+    
+    Args:
+        output_dir: Output directory
+        config_file: Path to config file used
+        start_date: Start date (datetime)
+        end_date: End date (datetime)
+        overrides: List of original override arguments
+        applied_overrides: List of override details that were applied
+    """
+    metadata = {
+        'generated_at': datetime.now().isoformat(),
+        'config_file': os.path.basename(config_file),
+        'start_date': start_date.strftime('%Y-%m-%d'),
+        'end_date': end_date.strftime('%Y-%m-%d'),
+        'command_line': {
+            'config': config_file,
+            'start_date_arg': start_date.strftime('%Y-%m-%d'),
+            'end_date_arg': end_date.strftime('%Y-%m-%d'),
+        },
+        'overrides': applied_overrides if applied_overrides else []
+    }
+    
+    metadata_file = os.path.join(output_dir, 'execution_metadata.json')
+    with open(metadata_file, 'w') as f:
+        json.dump(metadata, f, indent=2)
+    
+    print(f"  ℹ Execution metadata saved: {metadata_file}")
 
 
 def parse_date_argument(date_str, reference_date=None):
@@ -693,6 +849,13 @@ Examples:
         help='Generate ICS (iCalendar) files for each team member'
     )
     
+    parser.add_argument(
+        '--override',
+        action='append',
+        dest='overrides',
+        help='Override a shift: "DD/MM/YYYY@HH:MM Username" or "NOW Username" (can be used multiple times)'
+    )
+    
     args = parser.parse_args()
     
     # Create output directory and filename based on config file name
@@ -702,6 +865,17 @@ Examples:
     
     # Auto-generate output filename from config name
     output_file = os.path.join(output_dir, f"{config_basename}.xlsx")
+    
+    # Parse overrides
+    parsed_overrides = []
+    if args.overrides:
+        print(f"Processing {len(args.overrides)} override(s)...")
+        for override_str in args.overrides:
+            try:
+                parsed_overrides.append(parse_override_argument(override_str))
+            except ValueError as e:
+                print(f"Error: {e}")
+                return 1
     
     # Parse dates
     start_date = None
@@ -731,6 +905,29 @@ Examples:
         
         if result:
             layer_shifts, person_colors, start_date_actual, end_date_actual, schedule_name = result
+            
+            # Apply overrides if any
+            applied_overrides = []
+            if parsed_overrides:
+                print("Applying overrides...")
+                layer_shifts, applied_overrides = apply_overrides(layer_shifts, parsed_overrides)
+                
+                # Regenerate person_colors to include override users
+                for override_info in applied_overrides:
+                    override_person = override_info['override_person']
+                    if override_person not in person_colors:
+                        # Assign a color to the new person
+                        colors = [
+                            "E8F5E9", "E3F2FD", "FFF3E0", "FCE4EC", "F3E5F5",
+                            "E0F2F1", "FFF9C4", "FFE0B2", "F8BBD0", "D1C4E9",
+                            "C8E6C9", "BBDEFB", "FFE0B2", "F8BBD0", "E1BEE7"
+                        ]
+                        color_idx = len(person_colors) % len(colors)
+                        person_colors[override_person] = colors[color_idx]
+            
+            # Save execution metadata
+            save_execution_metadata(output_dir, args.config, start_date_actual, end_date_actual, 
+                                  args.overrides or [], applied_overrides)
             
             # Generate visual representation
             visual_output = output_file.replace('.xlsx', '.png')

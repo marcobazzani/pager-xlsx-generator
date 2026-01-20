@@ -278,6 +278,7 @@ This creates one `.ics` file per team member in the `ics_files/` folder:
 --start-date DATE       Start date: YYYY-MM-DD, relative (+2w, +3m), or "today"
 --end-date DATE         End date: YYYY-MM-DD or relative from start date
 --generate-ics          Generate iCalendar files for each team member
+--override OVERRIDE     Override a shift: "DD/MM/YYYY@HH:MM Username" or "NOW Username" (repeatable)
 ```
 
 **Date Format Details:**
@@ -286,10 +287,94 @@ This creates one `.ics` file per team member in the `ics_files/` folder:
 - **Units**: `d` (days), `w` (weeks), `m` (months), `y` (years)
 - **Reference**: `--start-date` is relative to today, `--end-date` is relative to start date
 
+**Override Format:**
+- **Date-Time**: `DD/MM/YYYY@HH:MM` - The time is used to find which shift to override
+- **NOW**: Use `NOW` instead of a date-time to override the current shift
+- **Username**: The person who will cover the overridden shift
+- **Multiple**: Use `--override` multiple times to override multiple shifts
+- **Example**: `--override "20/01/2026@09:00 John Doe"` - finds the shift covering 9:00 AM on Jan 20 and assigns it to John Doe
+
 **Output Files:**
 - Automatically generated from config filename
 - Example: `my_schedule.yaml` → `my_schedule/my_schedule.xlsx`
 - All outputs go in folder named after config file
+- **Metadata**: `execution_metadata.json` saved with dates and overrides for reproducibility
+
+## Override Feature
+
+### Basic Override Usage
+
+```bash
+# Override a specific shift
+python oncall_scheduler.py --config my_config.yaml \
+  --override "25/01/2026@14:00 Emergency Coverage"
+
+# Override the current shift (NOW)
+python oncall_scheduler.py --config my_config.yaml \
+  --override "NOW John Doe"
+
+# Multiple overrides
+python oncall_scheduler.py --config my_config.yaml \
+  --override "20/01/2026@09:00 User A" \
+  --override "21/01/2026@14:00 User B" \
+  --override "23/01/2026@10:30 User C"
+```
+
+### How Override Works
+
+1. **Finds the shift**: The date-time (e.g., `20/01/2026@09:00`) is used to find which shift covers that moment
+2. **Replaces the person**: The originally assigned person is replaced with your override user
+3. **Applies to all outputs**: Override appears in Excel, PNG chart, and ICS files
+4. **Saved in metadata**: The override is recorded in `execution_metadata.json`
+
+### Override Examples
+
+```bash
+# Friday afternoon emergency - override that specific time slot
+python oncall_scheduler.py --config my_schedule.yaml \
+  --override "24/01/2026@15:00 Emergency Contact"
+
+# Morning shift vacation coverage
+python oncall_scheduler.py --config my_schedule.yaml \
+  --override "27/01/2026@08:30 Vacation Coverage"
+
+# Right now - immediate override
+python oncall_scheduler.py --config my_schedule.yaml \
+  --override "NOW Incident Response Team"
+```
+
+## Execution Metadata
+
+Every run creates an `execution_metadata.json` file containing:
+- Generation timestamp
+- Config file used
+- Absolute start and end dates
+- Applied overrides with details
+
+This allows you to:
+- **Reproduce** the exact schedule later
+- **Audit** what overrides were applied
+- **Track** changes over time
+
+Example metadata:
+```json
+{
+  "generated_at": "2026-01-20T14:30:00",
+  "config_file": "my_schedule.yaml",
+  "start_date": "2026-01-20",
+  "end_date": "2026-02-03",
+  "overrides": [
+    {
+      "date": "2026-01-21",
+      "time_window": "13:00 - 18:00",
+      "layer": "Afternoon Shift",
+      "original_person": "Utente 3",
+      "override_person": "Override User",
+      "override_datetime": "2026-01-21 14:00"
+    }
+  ]
+}
+```
 
 ## Use Cases
 

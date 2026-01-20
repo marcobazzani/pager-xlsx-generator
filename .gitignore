@@ -4,3 +4,4 @@ layers_2_shifts_4users/
 *.png
 ics_files/
 output/
+execution_metadata.json
