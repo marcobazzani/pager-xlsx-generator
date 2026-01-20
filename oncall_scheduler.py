@@ -678,12 +678,6 @@ Examples:
     )
     
     parser.add_argument(
-        '--output',
-        default='oncall_schedule.xlsx',
-        help='Output xlsx filename (default: oncall_schedule.xlsx)'
-    )
-    
-    parser.add_argument(
         '--start-date',
         help='Start date: YYYY-MM-DD (e.g. 2026-01-20), relative (e.g. +2w, +3m), or "today"'
     )
@@ -701,15 +695,13 @@ Examples:
     
     args = parser.parse_args()
     
-    # Create output directory based on config file name
+    # Create output directory and filename based on config file name
     config_basename = os.path.splitext(os.path.basename(args.config))[0]
     output_dir = config_basename
     os.makedirs(output_dir, exist_ok=True)
     
-    # Update output path to be inside the config-specific directory
-    if not os.path.dirname(args.output):
-        # If output is just a filename, put it in the config directory
-        args.output = os.path.join(output_dir, os.path.basename(args.output))
+    # Auto-generate output filename from config name
+    output_file = os.path.join(output_dir, f"{config_basename}.xlsx")
     
     # Parse dates
     start_date = None
@@ -735,19 +727,18 @@ Examples:
     
     # Generate the schedule
     try:
-        result = generate_oncall_calendar(args.config, args.output, start_date, end_date)
+        result = generate_oncall_calendar(args.config, output_file, start_date, end_date)
         
         if result:
             layer_shifts, person_colors, start_date_actual, end_date_actual, schedule_name = result
             
             # Generate visual representation
-            visual_output = args.output.replace('.xlsx', '.png')
+            visual_output = output_file.replace('.xlsx', '.png')
             generate_visual_schedule(layer_shifts, person_colors, start_date_actual, 
                                    end_date_actual, schedule_name, visual_output)
             
             # Generate ICS files if requested
             if args.generate_ics:
-                output_dir = os.path.dirname(args.output) or "."
                 generate_ics_files(layer_shifts, schedule_name, output_dir)
         
     except FileNotFoundError as e:

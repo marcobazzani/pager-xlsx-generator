@@ -56,25 +56,45 @@ pip install -r requirements.txt
 
 ```bash
 # Generate schedule with default settings (today + 3 months)
-python oncall_scheduler.py --config your_config.yaml --output schedule.xlsx
+python oncall_scheduler.py --config your_config.yaml
 
 # Generate with iCalendar files for each team member
-python oncall_scheduler.py --config your_config.yaml --output schedule.xlsx --generate-ics
+python oncall_scheduler.py --config your_config.yaml --generate-ics
 
 # Using absolute dates
-python oncall_scheduler.py --config your_config.yaml --output schedule.xlsx \
+python oncall_scheduler.py --config your_config.yaml \
   --start-date 2026-01-20 --end-date 2026-04-20
 
 # Using relative dates (much easier!)
-python oncall_scheduler.py --config your_config.yaml --output schedule.xlsx \
+python oncall_scheduler.py --config your_config.yaml \
   --start-date today --end-date +2w
 
 # Mix absolute and relative
-python oncall_scheduler.py --config your_config.yaml --output schedule.xlsx \
+python oncall_scheduler.py --config your_config.yaml \
   --start-date 2026-01-20 --end-date +3m
 ```
 
 **Note:** On Windows, replace `\` line continuation with `^` or write the command on one line.
+
+### Output Files
+
+All outputs are automatically organized in a folder named after your configuration file:
+
+```
+your_config/
+├── your_config.xlsx          # Excel spreadsheet with formulas
+├── your_config.png          # Visual timeline chart
+└── ics_files/               # (if --generate-ics used)
+    ├── Team_Member_01.ics
+    ├── Team_Member_02.ics
+    └── ...
+```
+
+**Example:** Using `layers_2_shifts_4users.yaml` creates:
+- Folder: `layers_2_shifts_4users/`
+- Excel: `layers_2_shifts_4users/layers_2_shifts_4users.xlsx`
+- PNG: `layers_2_shifts_4users/layers_2_shifts_4users.png`
+- ICS: `layers_2_shifts_4users/ics_files/`
 
 ### Date Formats
 
@@ -111,19 +131,6 @@ Use relative notation for easier date calculations:
 # Start today, run for 90 days
 --start-date today --end-date +90d
 ```
-
-### Output Files
-
-All outputs are organized in a folder named after your configuration file:
-
-```
-your_config/
-├── schedule.xlsx          # Excel spreadsheet with formulas
-├── schedule.png          # Visual timeline chart
-└── ics_files/            # (if --generate-ics used)
-    ├── Team_Member_01.ics
-    ├── Team_Member_02.ics
-    └── ...
 ```
 
 ## Configuration
@@ -255,7 +262,7 @@ The PNG timeline shows:
 Use `--generate-ics` to create calendar files:
 
 ```bash
-python oncall_scheduler.py --config your_config.yaml --output schedule.xlsx --generate-ics
+python oncall_scheduler.py --config your_config.yaml --generate-ics
 ```
 
 This creates one `.ics` file per team member in the `ics_files/` folder:
@@ -268,7 +275,6 @@ This creates one `.ics` file per team member in the `ics_files/` folder:
 
 ```
 --config PATH           YAML configuration file (required)
---output FILENAME       Output Excel filename (default: oncall_schedule.xlsx)
 --start-date DATE       Start date: YYYY-MM-DD, relative (+2w, +3m), or "today"
 --end-date DATE         End date: YYYY-MM-DD or relative from start date
 --generate-ics          Generate iCalendar files for each team member
@@ -280,21 +286,26 @@ This creates one `.ics` file per team member in the `ics_files/` folder:
 - **Units**: `d` (days), `w` (weeks), `m` (months), `y` (years)
 - **Reference**: `--start-date` is relative to today, `--end-date` is relative to start date
 
+**Output Files:**
+- Automatically generated from config filename
+- Example: `my_schedule.yaml` → `my_schedule/my_schedule.xlsx`
+- All outputs go in folder named after config file
+
 ## Use Cases
 
 ### Quick Preview (Relative Dates)
 
 ```bash
 # Next 2 weeks
-python oncall_scheduler.py --config my_config.yaml --output schedule.xlsx \
+python oncall_scheduler.py --config my_config.yaml \
   --start-date today --end-date +2w
 
 # This week
-python oncall_scheduler.py --config my_config.yaml --output schedule.xlsx \
+python oncall_scheduler.py --config my_config.yaml \
   --start-date today --end-date +7d
 
 # Next 30 days
-python oncall_scheduler.py --config my_config.yaml --output schedule.xlsx \
+python oncall_scheduler.py --config my_config.yaml \
   --start-date today --end-date +30d
 ```
 
@@ -303,11 +314,11 @@ python oncall_scheduler.py --config my_config.yaml --output schedule.xlsx \
 ```bash
 # Q1 schedule
 python oncall_scheduler.py --config my_config.yaml \
-  --start-date 2026-01-01 --end-date 2026-04-01 --output schedule.xlsx
+  --start-date 2026-01-01 --end-date 2026-04-01
 
 # Q2 schedule
 python oncall_scheduler.py --config my_config.yaml \
-  --start-date 2026-04-01 --end-date 2026-07-01 --output schedule.xlsx
+  --start-date 2026-04-01 --end-date 2026-07-01
 ```
 
 ### Quarterly Planning (Relative Dates)
@@ -315,11 +326,11 @@ python oncall_scheduler.py --config my_config.yaml \
 ```bash
 # Next quarter (3 months)
 python oncall_scheduler.py --config my_config.yaml \
-  --start-date today --end-date +3m --output schedule.xlsx
+  --start-date today --end-date +3m
 
 # Start next month, run for 3 months
 python oncall_scheduler.py --config my_config.yaml \
-  --start-date +1m --end-date +3m --output schedule.xlsx
+  --start-date +1m --end-date +3m
 ```
 
 ### Monthly Schedules
@@ -327,11 +338,11 @@ python oncall_scheduler.py --config my_config.yaml \
 ```bash
 # Q1 schedule
 python oncall_scheduler.py --config my_config.yaml \
-  --start-date 2026-01-01 --end-date 2026-04-01 --output schedule.xlsx
+  --start-date 2026-01-01 --end-date 2026-04-01
 
 # Q2 schedule
 python oncall_scheduler.py --config my_config.yaml \
-  --start-date 2026-04-01 --end-date 2026-07-01 --output schedule.xlsx
+  --start-date 2026-04-01 --end-date 2026-07-01
 ```
 
 ### Monthly Schedules
@@ -339,19 +350,19 @@ python oncall_scheduler.py --config my_config.yaml \
 ```bash
 # January (absolute dates)
 python oncall_scheduler.py --config my_config.yaml \
-  --start-date 2026-01-01 --end-date 2026-02-01 --output schedule.xlsx
+  --start-date 2026-01-01 --end-date 2026-02-01
 
 # February (absolute dates)
 python oncall_scheduler.py --config my_config.yaml \
-  --start-date 2026-02-01 --end-date 2026-03-01 --output schedule.xlsx
+  --start-date 2026-02-01 --end-date 2026-03-01
 
 # This month (relative - easier!)
 python oncall_scheduler.py --config my_config.yaml \
-  --start-date today --end-date +1m --output schedule.xlsx
+  --start-date today --end-date +1m
 
 # Next month
 python oncall_scheduler.py --config my_config.yaml \
-  --start-date +1m --end-date +1m --output schedule.xlsx
+  --start-date +1m --end-date +1m
 ```
 
 ### Testing & Preview
@@ -359,11 +370,11 @@ python oncall_scheduler.py --config my_config.yaml \
 ```bash
 # Test with just 1 week
 python oncall_scheduler.py --config my_config.yaml \
-  --start-date today --end-date +7d --output schedule.xlsx
+  --start-date today --end-date +7d
 
 # Verify rotation with 3 days
 python oncall_scheduler.py --config my_config.yaml \
-  --start-date today --end-date +3d --output schedule.xlsx
+  --start-date today --end-date +3d
 ```
 
 ## Platform-Specific Notes
