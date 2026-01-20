@@ -2,6 +2,20 @@
 
 Generate professional on-call shift schedules with automated rotation management. Create Excel spreadsheets, visual PNG charts, and iCalendar files for your team's on-call coverage.
 
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Output Details](#excel-output-details)
+- [Command-Line Options](#command-line-options)
+- [Override Feature](#override-feature)
+- [Execution Metadata](#execution-metadata)
+- [Use Cases](#use-cases)
+- [Platform-Specific Notes](#platform-specific-notes)
+- [Troubleshooting](#troubleshooting)
+- [Tips & Best Practices](#tips--best-practices)
+
 ## Key Features
 
 - **📊 Excel Output** - Detailed schedule with dates, times, assignments, and on-call status formulas
@@ -9,9 +23,11 @@ Generate professional on-call shift schedules with automated rotation management
 - **📅 iCalendar Export** - Generate .ics files for each team member to import into their calendar
 - **⚙️ Flexible Configuration** - YAML-based setup for multiple layers and time windows
 - **🔄 Smart Rotation** - Automatic daily rotation with per-layer offsets
-- **📆 Date Ranges** - Configurable periods (default: 3 months from today)
+- **📆 Relative Dates** - Easy date specification: `today`, `+2w`, `+3m` (no manual calculation needed)
 - **⏰ Day-Specific Times** - Different time windows for different days (e.g., shorter Friday shifts)
 - **👻 Dummy Shifts** - Optional shifts that consume rotation but aren't visible (for fairness)
+- **🔧 Override Support** - Manually override specific shifts for emergencies or vacations
+- **📋 Execution Metadata** - Automatic tracking of generation parameters for reproducibility
 
 ## Quick Start
 
@@ -74,6 +90,18 @@ python oncall_scheduler.py --config your_config.yaml \
   --start-date 2026-01-20 --end-date +3m
 ```
 
+### Override a Shift
+
+```bash
+# Override for emergency coverage
+python oncall_scheduler.py --config my_config.yaml \
+  --override "25/01/2026@14:00 Emergency Team"
+
+# Override current shift right now
+python oncall_scheduler.py --config my_config.yaml \
+  --override "NOW John Doe"
+```
+
 **Note:** On Windows, replace `\` line continuation with `^` or write the command on one line.
 
 ### Output Files
@@ -130,7 +158,6 @@ Use relative notation for easier date calculations:
 
 # Start today, run for 90 days
 --start-date today --end-date +90d
-```
 ```
 
 ## Configuration
@@ -416,18 +443,6 @@ python oncall_scheduler.py --config my_config.yaml \
 # Start next month, run for 3 months
 python oncall_scheduler.py --config my_config.yaml \
   --start-date +1m --end-date +3m
-```
-
-### Monthly Schedules
-
-```bash
-# Q1 schedule
-python oncall_scheduler.py --config my_config.yaml \
-  --start-date 2026-01-01 --end-date 2026-04-01
-
-# Q2 schedule
-python oncall_scheduler.py --config my_config.yaml \
-  --start-date 2026-04-01 --end-date 2026-07-01
 ```
 
 ### Monthly Schedules
