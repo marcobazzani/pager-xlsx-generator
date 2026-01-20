@@ -10,6 +10,7 @@ The output includes all layers with exact dates calculated from start to end dat
 Usage:
     python oncall_scheduler.py --config schedule_2_5h.yaml
     python oncall_scheduler.py --config schedule_2_5h.yaml --start-date 2026-02-01 --end-date 2026-05-01
+    python oncall_scheduler.py --config schedule_2_5h.yaml --generate-ics
 """
 
 import argparse
@@ -494,6 +495,95 @@ def generate_visual_schedule(layer_shifts, person_colors, start_date, end_date, 
     print(f"  - Showing all {days_to_show} days")
 
 
+def generate_ics_files(layer_shifts, schedule_name, output_dir="."):
+    """
+    Generate ICS (iCalendar) files for each person in the schedule.
+    
+    Args:
+        layer_shifts: List of (date, layer_name, time_window, person, layer_idx)
+        schedule_name: Schedule name
+        output_dir: Directory to save ICS files
+    """
+    from collections import defaultdict
+    
+    # Group shifts by person
+    shifts_by_person = defaultdict(list)
+    for shift_date, layer_name, time_window, person, layer_idx in layer_shifts:
+        shifts_by_person[person].append((shift_date, layer_name, time_window))
+    
+    # Create output directory if it doesn't exist
+    ics_dir = os.path.join(output_dir, "ics_files")
+    os.makedirs(ics_dir, exist_ok=True)
+    
+    # Generate ICS file for each person
+    for person, shifts in shifts_by_person.items():
+        # Sanitize filename
+        safe_filename = "".join(c if c.isalnum() or c in (' ', '_', '-') else '_' for c in person)
+        ics_file = os.path.join(ics_dir, f"{safe_filename}.ics")
+        
+        with open(ics_file, 'w', encoding='utf-8') as f:
+            # Write ICS header
+            f.write("BEGIN:VCALENDAR\n")
+            f.write("VERSION:2.0\n")
+            f.write("PRODID:-//On-Call Scheduler//EN\n")
+            f.write(f"X-WR-CALNAME:{person} - On-Call Schedule\n")
+            f.write("X-WR-TIMEZONE:UTC\n")
+            f.write("CALSCALE:GREGORIAN\n")
+            f.write("METHOD:PUBLISH\n")
+            
+            # Write each shift as an event
+            for shift_date, layer_name, time_window in shifts:
+                # Parse time window
+                time_parts = time_window.split(' - ')
+                start_time_str = time_parts[0] if len(time_parts) > 0 else '00:00'
+                end_time_str = time_parts[1] if len(time_parts) > 1 else '23:59'
+                
+                # Parse times
+                start_hour, start_min = map(int, start_time_str.split(':'))
+                end_hour, end_min = map(int, end_time_str.split(':'))
+                
+                # Create datetime objects
+                start_dt = shift_date.replace(hour=start_hour, minute=start_min, second=0, microsecond=0)
+                end_dt = shift_date.replace(hour=end_hour, minute=end_min, second=0, microsecond=0)
+                
+                # Format for ICS (YYYYMMDDTHHMMSS)
+                start_str = start_dt.strftime('%Y%m%dT%H%M%S')
+                end_str = end_dt.strftime('%Y%m%dT%H%M%S')
+                
+                # Generate unique UID
+                uid = f"{start_str}-{person.replace(' ', '-')}-oncall@scheduler"
+                
+                # Current timestamp for DTSTAMP
+                now_str = datetime.now().strftime('%Y%m%dT%H%M%SZ')
+                
+                # Write event
+                f.write("BEGIN:VEVENT\n")
+                f.write(f"UID:{uid}\n")
+                f.write(f"DTSTAMP:{now_str}\n")
+                f.write(f"DTSTART:{start_str}\n")
+                f.write(f"DTEND:{end_str}\n")
+                f.write(f"SUMMARY:On-Call: {layer_name}\n")
+                f.write(f"DESCRIPTION:On-call shift for {person}\\nLayer: {layer_name}\\nSchedule: {schedule_name}\n")
+                f.write(f"LOCATION:On-Call\n")
+                f.write("STATUS:CONFIRMED\n")
+                f.write("TRANSP:OPAQUE\n")
+                f.write("BEGIN:VALARM\n")
+                f.write("TRIGGER:-PT15M\n")
+                f.write("ACTION:DISPLAY\n")
+                f.write("DESCRIPTION:On-Call shift starts in 15 minutes\n")
+                f.write("END:VALARM\n")
+                f.write("END:VEVENT\n")
+            
+            # Write ICS footer
+            f.write("END:VCALENDAR\n")
+    
+    print(f"✓ ICS files generated in: {ics_dir}/")
+    print(f"  - Generated {len(shifts_by_person)} calendar files")
+    for person in sorted(shifts_by_person.keys()):
+        safe_filename = "".join(c if c.isalnum() or c in (' ', '_', '-') else '_' for c in person)
+        print(f"    • {safe_filename}.ics ({len(shifts_by_person[person])} shifts)")
+
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -539,6 +629,12 @@ Examples:
         help='End date in YYYY-MM-DD format (overrides config default, defaults to start + 3 months)'
     )
     
+    parser.add_argument(
+        '--generate-ics',
+        action='store_true',
+        help='Generate ICS (iCalendar) files for each team member'
+    )
+    
     args = parser.parse_args()
     
     # Parse dates
@@ -570,6 +666,11 @@ Examples:
             visual_output = args.output.replace('.xlsx', '.png')
             generate_visual_schedule(layer_shifts, person_colors, start_date_actual, 
                                    end_date_actual, schedule_name, visual_output)
+            
+            # Generate ICS files if requested
+            if args.generate_ics:
+                output_dir = os.path.dirname(args.output) or "."
+                generate_ics_files(layer_shifts, schedule_name, output_dir)
         
     except FileNotFoundError as e:
         print(f"Error: {e}")
