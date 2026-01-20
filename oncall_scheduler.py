@@ -21,10 +21,68 @@ from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 import yaml
 import os
+import re
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import Rectangle
 import matplotlib.dates as mdates
+
+
+def parse_date_argument(date_str, reference_date=None):
+    """
+    Parse a date argument that can be either absolute (YYYY-MM-DD) or relative (+Nd, +Nw, +Nm, +Ny).
+    
+    Args:
+        date_str: Date string in format YYYY-MM-DD or relative format (+2d, +3w, +2m, +1y)
+        reference_date: Reference date for relative calculations (defaults to today)
+    
+    Returns:
+        datetime object
+    
+    Examples:
+        "2026-01-20" -> Jan 20, 2026
+        "+2d" or "+2" -> 2 days from reference date
+        "+3w" -> 3 weeks from reference date
+        "+2m" -> 2 months from reference date
+        "+1y" -> 1 year from reference date
+        "today" -> today's date
+    """
+    if reference_date is None:
+        reference_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    date_str = date_str.strip().lower()
+    
+    # Handle "today" keyword
+    if date_str == "today":
+        return reference_date
+    
+    # Handle relative dates: +Nd, +Nw, +Nm, +Ny (or just +N for days)
+    relative_pattern = r'^\+(\d+)([dwmy])?$'
+    match = re.match(relative_pattern, date_str)
+    
+    if match:
+        amount = int(match.group(1))
+        unit = match.group(2) or 'd'  # Default to days if no unit specified
+        
+        if unit == 'd':
+            return reference_date + timedelta(days=amount)
+        elif unit == 'w':
+            return reference_date + timedelta(weeks=amount)
+        elif unit == 'm':
+            return reference_date + relativedelta(months=amount)
+        elif unit == 'y':
+            return reference_date + relativedelta(years=amount)
+    
+    # Try parsing as absolute date (YYYY-MM-DD)
+    try:
+        return datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        raise ValueError(
+            f"Invalid date format '{date_str}'. "
+            f"Use YYYY-MM-DD (e.g., 2026-01-20) or relative format "
+            f"(e.g., +2d, +3w, +2m, +1y, or today)"
+        )
+
 
 
 def load_schedule_config(config_file):
@@ -627,12 +685,12 @@ Examples:
     
     parser.add_argument(
         '--start-date',
-        help='Start date in YYYY-MM-DD format (overrides config default, defaults to today)'
+        help='Start date: YYYY-MM-DD (e.g. 2026-01-20), relative (e.g. +2w, +3m), or "today"'
     )
     
     parser.add_argument(
         '--end-date',
-        help='End date in YYYY-MM-DD format (overrides config default, defaults to start + 3 months)'
+        help='End date: YYYY-MM-DD, relative from start (e.g. +2w, +3m), or relative from today'
     )
     
     parser.add_argument(
@@ -659,16 +717,20 @@ Examples:
     
     if args.start_date:
         try:
-            start_date = datetime.strptime(args.start_date, '%Y-%m-%d')
-        except ValueError:
-            print(f"Error: Invalid start date format '{args.start_date}'. Use YYYY-MM-DD")
+            start_date = parse_date_argument(args.start_date)
+            print(f"  Start date: {start_date.strftime('%Y-%m-%d')} ({args.start_date})")
+        except ValueError as e:
+            print(f"Error: {e}")
             return 1
     
     if args.end_date:
         try:
-            end_date = datetime.strptime(args.end_date, '%Y-%m-%d')
-        except ValueError:
-            print(f"Error: Invalid end date format '{args.end_date}'. Use YYYY-MM-DD")
+            # For relative end dates, calculate from start_date if provided, otherwise from today
+            reference = start_date if start_date else datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            end_date = parse_date_argument(args.end_date, reference)
+            print(f"  End date: {end_date.strftime('%Y-%m-%d')} ({args.end_date})")
+        except ValueError as e:
+            print(f"Error: {e}")
             return 1
     
     # Generate the schedule
