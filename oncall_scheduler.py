@@ -517,8 +517,11 @@ def generate_ics_files(layer_shifts, schedule_name, output_dir="."):
     
     # Generate ICS file for each person
     for person, shifts in shifts_by_person.items():
-        # Sanitize filename
+        # Sanitize filename and pad numbers with zero (e.g., Utente 1 -> Utente 01)
+        import re
         safe_filename = "".join(c if c.isalnum() or c in (' ', '_', '-') else '_' for c in person)
+        # Replace single digit numbers with zero-padded version
+        safe_filename = re.sub(r'\b(\d)\b', r'0\1', safe_filename)
         ics_file = os.path.join(ics_dir, f"{safe_filename}.ics")
         
         with open(ics_file, 'w', encoding='utf-8') as f:
@@ -580,7 +583,10 @@ def generate_ics_files(layer_shifts, schedule_name, output_dir="."):
     print(f"✓ ICS files generated in: {ics_dir}/")
     print(f"  - Generated {len(shifts_by_person)} calendar files")
     for person in sorted(shifts_by_person.keys()):
+        import re
         safe_filename = "".join(c if c.isalnum() or c in (' ', '_', '-') else '_' for c in person)
+        # Replace single digit numbers with zero-padded version
+        safe_filename = re.sub(r'\b(\d)\b', r'0\1', safe_filename)
         print(f"    • {safe_filename}.ics ({len(shifts_by_person[person])} shifts)")
 
 
