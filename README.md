@@ -1,239 +1,371 @@
 # PagerDuty-Style On-Call Shift Scheduler
 
-Generate professional on-call shift schedules in Excel format with visual representation. Uses PagerDuty-style layer definitions where each layer represents a single time window that rotates daily.
+Generate professional on-call shift schedules with automated rotation management. Create Excel spreadsheets, visual PNG charts, and iCalendar files for your team's on-call coverage.
 
 ## Key Features
 
-- **Excel output** - Detailed schedule with all shifts, dates, and assignments
-- **Visual output** - Color-coded PNG chart showing the schedule visually
-- **7 layers configuration** - 4 layers for Mon-Thu (08:00-18:00), 3 layers for Friday (08:00-13:00)
-- **Shifted rotation** - Each layer has the same 10 users shifted by 1 position
-- **Exact dates** - Real calendar dates from start to end date
-- **3-month default** - Configurable date range (default: today + 3 months)
+- **📊 Excel Output** - Detailed schedule with dates, times, assignments, and on-call status formulas
+- **📈 Visual Charts** - Color-coded PNG timeline showing the complete schedule
+- **📅 iCalendar Export** - Generate .ics files for each team member to import into their calendar
+- **⚙️ Flexible Configuration** - YAML-based setup for multiple layers and time windows
+- **🔄 Smart Rotation** - Automatic daily rotation with per-layer offsets
+- **📆 Date Ranges** - Configurable periods (default: 3 months from today)
+- **⏰ Day-Specific Times** - Different time windows for different days (e.g., shorter Friday shifts)
+- **👻 Dummy Shifts** - Optional shifts that consume rotation but aren't visible (for fairness)
 
-## Layer Configuration
+## Quick Start
 
-### Monday to Thursday (4 layers)
-- **Layer 1**: 08:00-10:30
-- **Layer 2**: 10:30-13:00
-- **Layer 3**: 13:00-15:30
-- **Layer 4**: 15:30-18:00
+### Prerequisites
 
-### Friday (3 layers)
-- **Layer 5**: 08:00-09:30
-- **Layer 6**: 09:30-11:00
-- **Layer 7**: 11:00-13:00
+- Python 3.7 or higher
+- pip (Python package manager)
 
-### Rotation Logic
+### Installation
 
-All 7 layers use the same 10 users, but **shifted backwards by 1 position** per layer:
-
-```
-Layer 1: Utente 1, Utente 2, Utente 3, ..., Utente 10
-Layer 2: Utente 10, Utente 1, Utente 2, ..., Utente 9
-Layer 3: Utente 9, Utente 10, Utente 1, ..., Utente 8
-Layer 4: Utente 8, Utente 9, Utente 10, ..., Utente 7
-Layer 5: Utente 7, Utente 8, Utente 9, ..., Utente 6
-Layer 6: Utente 6, Utente 7, Utente 8, ..., Utente 5
-Layer 7: Utente 5, Utente 6, Utente 7, ..., Utente 4
-```
-
-Each layer rotates its team members **daily**.
-
-## Installation
+#### macOS / Linux
 
 ```bash
+# Clone the repository
+git clone https://github.com/marcobazzani/pager-xlsx-generator.git
+cd pager-xlsx-generator
+
+# Create virtual environment
 python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-## Usage
+#### Windows
 
-### Basic Commands
+```cmd
+# Clone the repository
+git clone https://github.com/marcobazzani/pager-xlsx-generator.git
+cd pager-xlsx-generator
+
+# Create virtual environment
+python -m venv venv
+venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Basic Usage
 
 ```bash
-# Generate schedule with defaults (today + 3 months)
-python oncall_scheduler.py --config layers_2_5h_shifts.yaml
+# Generate schedule with default settings (today + 3 months)
+python oncall_scheduler.py --config your_config.yaml --output schedule.xlsx
+
+# Generate with iCalendar files for each team member
+python oncall_scheduler.py --config your_config.yaml --output schedule.xlsx --generate-ics
 
 # Custom date range
-python oncall_scheduler.py --config layers_2_5h_shifts.yaml \
+python oncall_scheduler.py --config your_config.yaml --output schedule.xlsx \
   --start-date 2026-01-20 --end-date 2026-04-20
-
-# Custom output filename
-python oncall_scheduler.py --config layers_2_5h_shifts.yaml \
-  --output my_schedule.xlsx
-
-# Specific month
-python oncall_scheduler.py --config layers_2_5h_shifts.yaml \
-  --start-date 2026-02-01 --end-date 2026-03-01 \
-  --output february_2026.xlsx
 ```
+
+**Note:** On Windows, replace `\` line continuation with `^` or write the command on one line.
 
 ### Output Files
 
-The tool generates **two files**:
+All outputs are organized in a folder named after your configuration file:
 
-1. **Excel file** (`.xlsx`) - Complete schedule with:
-   - Date (exact calendar date)
-   - Day (Monday, Tuesday, etc.)
-   - Layer (Layer 1, Layer 2, etc.)
-   - Time Window (e.g., 08:00 - 10:30)
-   - On-Call Person (Utente 1, Utente 2, etc.)
-   - Color-coded by person
+```
+your_config/
+├── schedule.xlsx          # Excel spreadsheet with formulas
+├── schedule.png          # Visual timeline chart
+└── ics_files/            # (if --generate-ics used)
+    ├── Team_Member_01.ics
+    ├── Team_Member_02.ics
+    └── ...
+```
 
-2. **Visual chart** (`.png`) - Graphical representation with:
-   - Timeline view (vertical: time, horizontal: dates)
-   - Color bars showing who's on-call
-   - Person names on each shift bar
-   - Legend with all team members
-   - Limited to first 30 days for readability
+## Configuration
 
-### Parameters
+Create a YAML configuration file to define your schedule. Two example configurations are included:
 
-- `--config`: Path to YAML configuration file (required)
-- `--output`: Output xlsx filename (default: oncall_schedule.xlsx)
-- `--start-date`: Start date YYYY-MM-DD (default: today)
-- `--end-date`: End date YYYY-MM-DD (default: start + 3 months)
+### Simple 2-Layer Configuration
 
-## Example Rotation
-
-### Week 1 (Jan 20-24, 2026)
-
-**Monday, Jan 20:**
-- 08:00-10:30: Utente 1 (Layer 1)
-- 10:30-13:00: Utente 10 (Layer 2)
-- 13:00-15:30: Utente 9 (Layer 3)
-- 15:30-18:00: Utente 8 (Layer 4)
-
-**Tuesday, Jan 21:**
-- 08:00-10:30: Utente 2 (Layer 1)
-- 10:30-13:00: Utente 1 (Layer 2)
-- 13:00-15:30: Utente 10 (Layer 3)
-- 15:30-18:00: Utente 9 (Layer 4)
-
-**Wednesday, Jan 22:**
-- 08:00-10:30: Utente 3 (Layer 1)
-- 10:30-13:00: Utente 2 (Layer 2)
-- 13:00-15:30: Utente 1 (Layer 3)
-- 15:30-18:00: Utente 10 (Layer 4)
-
-**Thursday, Jan 23:**
-- 08:00-10:30: Utente 4 (Layer 1)
-- 10:30-13:00: Utente 3 (Layer 2)
-- 13:00-15:30: Utente 2 (Layer 3)
-- 15:30-18:00: Utente 1 (Layer 4)
-
-**Friday, Jan 24:**
-- 08:00-09:30: Utente 5 (Layer 5)
-- 09:30-11:00: Utente 4 (Layer 6)
-- 11:00-13:00: Utente 3 (Layer 7)
-
-This ensures:
-- **Daily rotation**: Each person rotates to the next day
-- **Layer shift**: Each layer starts with a different person (backwards shift)
-- **Fair distribution**: Everyone gets similar coverage across time slots
-
-## Configuration File Structure
-
-Edit `layers_2_5h_shifts.yaml` to customize:
+For basic coverage with fewer team members:
 
 ```yaml
 schedule:
-  name: "Your Schedule Name"
+  name: "My On-Call Schedule"
+  description: "Two 5-hour shifts"
   start_date: "2026-01-20"
   duration_months: 3
   
   layers:
     layer1:
-      name: "Layer 1"
-      time_window:
-        start: "08:00"
-        end: "10:30"
-      days: ["monday", "tuesday", "wednesday", "thursday"]
+      name: "Morning Shift"
+      time_windows:
+        monday:
+          start: "08:00"
+          end: "13:00"
+        tuesday:
+          start: "08:00"
+          end: "13:00"
+        # ... other days
       rotation_team:
-        - "Utente 1"
-        - "Utente 2"
-        # ... up to Utente 10
+        - "Team Member 1"
+        - "Team Member 2"
+        - "Team Member 3"
+        - "Team Member 4"
     
     layer2:
-      # Same structure, shifted team list
-      # ...
+      name: "Afternoon Shift"
+      time_windows:
+        monday:
+          start: "13:00"
+          end: "18:00"
+        # ... other days
+        friday:
+          start: "13:00"
+          end: "18:00"
+          dummy: true  # Consumes rotation but not shown
+      rotation_team:
+        - "Team Member 4"
+        - "Team Member 3"
+        - "Team Member 2"
+        - "Team Member 1"
 ```
 
-## Visual Output Details
+### Advanced Multi-Layer Configuration
 
-The PNG chart shows:
-- **X-axis**: Calendar dates with day names
-- **Y-axis**: Time (08:00 to 18:00)
+For complex coverage with multiple time slots:
+
+```yaml
+schedule:
+  name: "Business Hours Coverage"
+  description: "Multiple shifts per day"
+  start_date: "2026-01-20"
+  duration_months: 3
+  
+  layers:
+    layer1:
+      name: "Morning Early"
+      time_windows:
+        monday:
+          start: "08:00"
+          end: "10:30"
+        # Different times per day supported
+        friday:
+          start: "08:00"
+          end: "09:30"
+      rotation_team:
+        - "User 1"
+        - "User 2"
+        # ... more users
+```
+
+### Configuration Options
+
+- **schedule.name**: Display name for the schedule
+- **schedule.description**: Description text
+- **schedule.start_date**: Default start date (YYYY-MM-DD)
+- **schedule.duration_months**: Default duration in months
+- **layers**: Dictionary of layer configurations
+  - **name**: Layer display name
+  - **time_windows**: Per-day time configuration
+    - **dayname.start**: Start time (HH:MM)
+    - **dayname.end**: End time (HH:MM)
+    - **dayname.dummy**: Optional, if true shift consumes rotation but isn't shown
+  - **rotation_team**: List of team member names (rotates daily)
+
+### Rotation Logic
+
+- Each layer rotates through its `rotation_team` list **daily**
+- Different layers can have different or shifted team orders for fair distribution
+- Dummy shifts count for rotation but don't appear in outputs (useful for balance)
+
+## Excel Output Details
+
+The generated Excel file includes:
+
+- **Date**: Calendar date for the shift
+- **Day**: Day of week (Monday, Tuesday, etc.)
+- **Start Time**: Shift start time
+- **End Time**: Shift end time
+- **Hours**: Calculated duration (End - Start)
+- **On-Call Person**: Team member assigned
+- **On-Call Status**: Formula that shows "On-Call" when NOW() is within the shift time
+- **Empty rows**: Between different dates for readability
+- **Color coding**: Each person has a unique color
+- **Real-time status**: Excel formula highlights current on-call shift
+
+## Visual Chart Details
+
+The PNG timeline shows:
+
+- **Horizontal axis**: Calendar dates with day names
+- **Vertical axis**: Time of day (dynamically scaled to your shift times)
 - **Color bars**: Each person has a unique color
-- **Names**: Person names displayed on shift bars
+- **Text labels**: Person names on each shift bar
 - **Legend**: All team members with their colors
-- **Title**: Schedule name and date range
+- **Full schedule**: Shows all days in your date range
 
-For schedules longer than 30 days, only the first 30 days are visualized (Excel contains full schedule).
+## iCalendar Export
+
+Use `--generate-ics` to create calendar files:
+
+```bash
+python oncall_scheduler.py --config your_config.yaml --output schedule.xlsx --generate-ics
+```
+
+This creates one `.ics` file per team member in the `ics_files/` folder:
+- Compatible with Google Calendar, Outlook, Apple Calendar, etc.
+- Each file contains all shifts for that person
+- Includes 15-minute reminder alarms
+- Can be imported or subscribed to
+
+## Command-Line Options
+
+```
+--config PATH          YAML configuration file (required)
+--output FILENAME      Output Excel filename (default: oncall_schedule.xlsx)
+--start-date YYYY-MM-DD  Override config start date
+--end-date YYYY-MM-DD    Override config end date
+--generate-ics         Generate iCalendar files for each team member
+```
 
 ## Use Cases
 
 ### Quarterly Planning
-```bash
-# Q1 2026
-python oncall_scheduler.py --config layers_2_5h_shifts.yaml \
-  --start-date 2026-01-01 --end-date 2026-04-01 --output q1_2026.xlsx
 
-# Q2 2026
-python oncall_scheduler.py --config layers_2_5h_shifts.yaml \
-  --start-date 2026-04-01 --end-date 2026-07-01 --output q2_2026.xlsx
+```bash
+# Q1 schedule
+python oncall_scheduler.py --config my_config.yaml \
+  --start-date 2026-01-01 --end-date 2026-04-01 --output schedule.xlsx
+
+# Q2 schedule
+python oncall_scheduler.py --config my_config.yaml \
+  --start-date 2026-04-01 --end-date 2026-07-01 --output schedule.xlsx
 ```
 
 ### Monthly Schedules
+
 ```bash
 # January
-python oncall_scheduler.py --config layers_2_5h_shifts.yaml \
-  --start-date 2026-01-01 --end-date 2026-02-01 --output jan_2026.xlsx
+python oncall_scheduler.py --config my_config.yaml \
+  --start-date 2026-01-01 --end-date 2026-02-01 --output schedule.xlsx
 
 # February
-python oncall_scheduler.py --config layers_2_5h_shifts.yaml \
-  --start-date 2026-02-01 --end-date 2026-03-01 --output feb_2026.xlsx
+python oncall_scheduler.py --config my_config.yaml \
+  --start-date 2026-02-01 --end-date 2026-03-01 --output schedule.xlsx
 ```
 
 ### Preview Mode
+
 ```bash
 # Generate just 2 weeks to preview
-python oncall_scheduler.py --config layers_2_5h_shifts.yaml \
-  --start-date 2026-01-20 --end-date 2026-02-03 --output preview.xlsx
+python oncall_scheduler.py --config my_config.yaml \
+  --start-date 2026-01-20 --end-date 2026-02-03 --output schedule.xlsx
 ```
 
-## Tips
+## Platform-Specific Notes
 
-- **Visual preview**: Generate short periods (1-2 weeks) first to verify rotation
-- **Excel for details**: Use Excel file for complete schedule and planning
-- **PNG for sharing**: Use PNG chart for quick visualization and presentations
-- **Date alignment**: Start dates on Monday for cleaner weekly views
-- **Configuration**: Keep YAML file in version control to track team changes
+### macOS / Linux
+
+- Use `python3` if your system has both Python 2 and 3
+- Virtual environment activation: `source venv/bin/activate`
+- Line continuation in commands: `\`
+- File paths use forward slashes: `/path/to/file`
+
+### Windows
+
+- Use `python` (usually points to Python 3)
+- Virtual environment activation: `venv\Scripts\activate`
+- Line continuation in cmd: `^` or PowerShell: `` ` ``
+- File paths use backslashes: `\path\to\file` or forward slashes work too
+
+### All Platforms
+
+To deactivate the virtual environment when done:
+```bash
+deactivate
+```
 
 ## Troubleshooting
 
-### No shifts on certain days
-- Check `days` field in YAML (monday, tuesday, etc.)
-- Verify date range includes those days
+### "Command not found: python" or "python3"
 
-### Wrong rotation
-- Verify `rotation_team` lists are correctly shifted by 1 per layer
-- Check that all 10 users are present in each layer
+**macOS/Linux:**
+```bash
+# Check if Python is installed
+which python3
+# or install with package manager
+sudo apt install python3 python3-pip  # Ubuntu/Debian
+brew install python3  # macOS with Homebrew
+```
 
-### Visual too crowded
-- Use shorter date ranges (1-2 weeks) for detailed view
-- Full schedule always available in Excel file
+**Windows:**
+- Download from [python.org](https://www.python.org/downloads/)
+- Check "Add Python to PATH" during installation
 
-### Colors hard to distinguish
-- Script uses optimized color palette
-- Check person names on bars and legend
+### "No module named 'openpyxl'" or similar
 
-## Requirements
+Make sure you activated the virtual environment and installed requirements:
+```bash
+source venv/bin/activate  # macOS/Linux
+venv\Scripts\activate     # Windows
+pip install -r requirements.txt
+```
+
+### No shifts generated
+
+- Check `time_windows` in your YAML config includes the days you want
+- Verify date range includes those days of the week
+- Check console output for any error messages
+
+### Excel shows #VALUE! or formula errors
+
+- Open the file and enable editing (Excel protected view)
+- Excel Online/Mac may need formula compatibility mode
+- The "On-Call Status" column uses NOW() which updates when you open the file
+
+### Visual chart is crowded
+
+- Colors and text overlap? The chart is optimized for the full date range
+- Zoom in on the PNG file for detail
+- Consider generating shorter periods for very detailed views
+
+### iCalendar files not importing
+
+- Make sure you used `--generate-ics` flag
+- Files are in `config_name/ics_files/` folder
+- Most calendar apps: File → Import → Select .ics file
+- Some apps prefer drag-and-drop
+
+## Tips & Best Practices
+
+- **Start with a preview**: Generate a 2-week schedule first to verify your configuration
+- **Version control**: Keep your YAML configuration files in git to track changes
+- **Date alignment**: Start on Monday for cleaner weekly boundaries
+- **Calendar integration**: Use `--generate-ics` and share .ics files with your team
+- **Excel formulas**: The "On-Call Status" column automatically highlights current shifts
+- **Visual sharing**: PNG charts are great for team presentations and dashboards
+- **Fair distribution**: Use dummy shifts to balance rotation when coverage hours differ by day
+
+## Dependencies
 
 - Python 3.7+
-- openpyxl (Excel generation)
-- pyyaml (Configuration parsing)
-- python-dateutil (Date calculations)
-- matplotlib (Visual chart generation)
+- openpyxl - Excel file generation
+- pyyaml - YAML configuration parsing
+- python-dateutil - Date calculation utilities
+- matplotlib - Visual chart generation
+
+All dependencies are installed automatically via `pip install -r requirements.txt`
+
+## License
+
+[Include your license information here]
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Support
+
+For issues, questions, or suggestions, please open an issue on GitHub.
