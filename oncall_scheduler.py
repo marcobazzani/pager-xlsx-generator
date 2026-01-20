@@ -643,6 +643,16 @@ Examples:
     
     args = parser.parse_args()
     
+    # Create output directory based on config file name
+    config_basename = os.path.splitext(os.path.basename(args.config))[0]
+    output_dir = config_basename
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Update output path to be inside the config-specific directory
+    if not os.path.dirname(args.output):
+        # If output is just a filename, put it in the config directory
+        args.output = os.path.join(output_dir, os.path.basename(args.output))
+    
     # Parse dates
     start_date = None
     end_date = None
