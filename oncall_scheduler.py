@@ -298,7 +298,7 @@ def calculate_date_range(schedule_config, start_date_override=None, end_date_ove
 def generate_dates_for_layer(layer_config, start_date, end_date):
     """
     Generate all dates where a layer should have shifts.
-    Now supports time_windows per day configuration.
+    Now supports time_windows per day configuration with multiple windows per day.
     
     Args:
         layer_config: Layer configuration dictionary
@@ -306,7 +306,8 @@ def generate_dates_for_layer(layer_config, start_date, end_date):
         end_date: End date (datetime)
     
     Returns:
-        List of tuples (datetime, day_name) for dates where this layer is active
+        List of tuples (datetime, day_name, window_index) for dates where this layer is active
+        window_index is used when a day has multiple time windows
     """
     day_map = {
         'monday': 0, 'tuesday': 1, 'wednesday': 2, 
@@ -330,7 +331,24 @@ def generate_dates_for_layer(layer_config, start_date, end_date):
     while current_date < end_date:
         weekday = current_date.weekday()
         if weekday in active_weekdays:
-            dates.append((current_date, active_weekdays[weekday]))
+            day_name = active_weekdays[weekday]
+            
+            # Check if this day has multiple time windows
+            if 'time_windows' in layer_config and day_name in time_windows:
+                day_config = time_windows[day_name]
+                
+                # Support both single window (dict) and multiple windows (list)
+                if isinstance(day_config, list):
+                    # Multiple windows for this day
+                    for window_idx in range(len(day_config)):
+                        dates.append((current_date, day_name, window_idx))
+                else:
+                    # Single window (backward compatibility)
+                    dates.append((current_date, day_name, 0))
+            else:
+                # Old structure or no time_windows
+                dates.append((current_date, day_name, 0))
+                
         current_date += timedelta(days=1)
     
     return dates
@@ -436,16 +454,28 @@ def generate_oncall_calendar(config_file, output_file, start_date_override=None,
         dates = generate_dates_for_layer(layer_config, start_date, end_date)
         
         # Assign people in rotation
-        for date_idx, (shift_date, day_name) in enumerate(dates):
+        for date_idx, (shift_date, day_name, window_idx) in enumerate(dates):
             person = rotation_team[date_idx % len(rotation_team)]
             
-            # Get time window for this specific day
+            # Get time window for this specific day and window
             is_dummy_day = False
             if time_windows and day_name in time_windows:
-                day_window = time_windows[day_name]
+                day_config = time_windows[day_name]
+                
+                # Support both single window (dict) and multiple windows (list)
+                if isinstance(day_config, list):
+                    # Multiple windows - get the specific window
+                    if window_idx < len(day_config):
+                        day_window = day_config[window_idx]
+                    else:
+                        day_window = day_config[0]  # Fallback
+                else:
+                    # Single window (backward compatibility)
+                    day_window = day_config
+                
                 start_time = day_window.get('start', 'N/A')
                 end_time = day_window.get('end', 'N/A')
-                is_dummy_day = day_window.get('dummy', False)  # Check if specific day is dummy
+                is_dummy_day = day_window.get('dummy', False)  # Check if specific window is dummy
             else:
                 # Fallback to old structure
                 start_time = old_time_window.get('start', 'N/A')
